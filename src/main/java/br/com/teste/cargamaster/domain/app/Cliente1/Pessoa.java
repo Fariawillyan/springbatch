@@ -1,4 +1,4 @@
-package br.com.teste.cargamaster.domain.motor.PreJob.entity;
+package br.com.teste.cargamaster.domain.app.Cliente1;
 
 import jakarta.persistence.*;
 import lombok.Data;
