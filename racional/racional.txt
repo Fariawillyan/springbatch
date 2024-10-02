@@ -1,0 +1,195 @@
+*********** Racionar da ideia ***********
+
+
+Verifico se a carga existe na base
+	- Carrego todos os dados da carga necessários para fazer as validações abaixo
+
+Verifico se as conecxoes com os databases estão ok
+
+Verifico se o arquivo de carga existe
+
+Verifico se o arquivo de carga está acessivel / possivel ler
+
+
+*********** Processamento ***********
+
+
+Ler arquivos de carga
+
+Carregar todos os dados da carga para processamento
+
+boolean falha = false;
+
+while !carga.EOF then
+{
+	// linha corrente a ser processada
+	String registro = carga.getLine();
+
+	/*FALTA FAZER ARQUIVOS DE EXCEL*/
+
+	//Realizando as indetificação do tipo de quebra de dado
+	if (carga.delimitador.usa_posicionamento)
+	{
+		//Realizando as indetificação da cargar
+		localizaPosicaoCampos(registro, cargaCampos);
+	}
+	else
+	{
+		//Realizando as indetificação da cargar
+		localizaDelimitadorCampos(registro, carga.delimitador.delimitador, cargaCampos);
+	}
+
+	foreach(CargaDestino cargaDestino : cargaDestinos)
+	{
+		falha = processaCargaDestino(cargaDestino, cargaCampos);
+	}
+
+}
+
+------------------------------------------------------------------------------------------------------------------
+boolean processaCargaDestino(CargaDestino cargaDestino, List<CargaCampo> cargaCampos)
+{
+	boolean falha = false;
+
+	if(!"".equals.(cargaDestino.sql_insert))
+	{
+		boolean valida = true;
+
+		if(!"".equals.(cargaDestino.sql_insert_valida))
+		{
+			valida = validaSQL(cargaDestino.sql_insert_valida, cargaDestinoCampo, cargaCampos);
+		}
+
+		if (valida)
+		{
+			if (!executaSQL(cargaDestino.sql_insert, cargaDestinoCampo, cargaCampos))
+			{
+				falha = true;
+			}
+		}
+	}
+
+	if(!"".equals.(cargaDestino.sql_update))
+    {
+        boolean valida = true;
+
+        if(!"".equals.(cargaDestino.sql_update_valida))
+        {
+            valida = validaSQL(cargaDestino.sql_update_valida, cargaDestinoCampo, cargaCampos);
+        }
+
+        if (valida)
+        {
+            if (!executaSQL(cargaDestino.sql_update, cargaDestinoCampo, cargaCampos))
+            {
+                falha = true;
+            }
+        }
+    }
+
+    if(!"".equals.(cargaDestino.sql_delete))
+    {
+        boolean valida = true;
+
+        if(!"".equals.(cargaDestino.sql_delete_valida))
+        {
+            valida = validaSQL(cargaDestino.sql_delete_valida, cargaDestinoCampo, cargaCampos);
+        }
+
+        if (valida)
+        {
+            if (!executaSQL(cargaDestino.sql_delete, cargaDestinoCampo, cargaCampos))
+            {
+                falha = true;
+            }
+        }
+    }
+
+	return falha;
+}
+
+
+------------------------------------------------------------------------------------------------------------------
+boolean validaSQL(String sqlValida, List<CargaDestinoCampo> cargaDestinoCampos, List<CargaCampo> cargaCampos)
+{
+	objSql.stm = sqlValida;
+
+	foreach(CargaDestinoCampo cargaDestinoCampo :  cargaDestino.cargaDestinoCampos)
+	{
+		if(cargaDestinoCampo.isPk)
+		{
+			CargaCampo cargaCampo = cargaCampos.stream()
+											   .filter(x -> x.getIdCargaCampo(), cargaDestinoCampo.idCargaCampo))
+											   .findFirst()
+											   .orElse(null);
+
+			if ((cargaCampo != null) && (objSql.Paramentes.find(cargaCampo.campo.campo)))
+			{
+				// Verificar como fazer esse convertValue, pois tem q retornar N tipos
+				objSql.Paramentes.value = convertValue(cargaDestinoCampo, cargaCampo);
+			}
+		}
+	}
+
+	objSql.execute;
+
+	// Se o result for null ok pode inserir, se não false
+	if (objSql.result.isnull)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+------------------------------------------------------------------------------------------------------------------
+boolean executaSQL(String sqlExecute, List<CargaDestinoCampo> cargaDestinoCampos, List<CargaCampo> cargaCampos)
+{
+	objSql.stm = sqlExecute;
+
+	foreach(CargaDestinoCampo cargaDestinoCampo :  cargaDestino.cargaDestinoCampos)
+	{
+		CargaCampo cargaCampo = cargaCampos.stream()
+										   .filter(x -> x.getIdCargaCampo(), cargaDestinoCampo.idCargaCampo))
+										   .findFirst()
+										   .orElse(null);
+
+		if ((cargaCampo != null) && (objSql.Paramentes.find(cargaCampo.campo.campo)))
+		{
+			// Verificar como fazer esse convertValue, pois tem q retornar N tipos
+			objSql.Paramentes.value = convertValue(cargaDestinoCampo, cargaCampo);
+		}
+	}
+
+	try
+	{
+		objSql.execute;
+		return true;
+	}
+	catch (...)
+	{
+		return false;
+	}
+}
+
+------------------------------------------------------------------------------------------------------------------
+void localizaPosicaoCampos(String registro, List<CargaCampo> cargaCampos)
+{
+	foreach (CargaCampo cargaCampo : cargaCampos)
+	{
+		cargaCampo.value = registro.(cargaCampo.posicao_inicial, cargaCampo.posicao_final);
+	}
+}
+
+------------------------------------------------------------------------------------------------------------------
+void localizaDelimitadorCampos(String registro, String delimitador, List<CargaCampo> cargaCampos)
+{
+	String[] campos = registro.split(delimitador);
+
+	foreach (CargaCampo cargaCampo : cargaCampos)
+	{
+		cargaCampo.value = campos[cargaCampos.ordem];
+	}
+}
