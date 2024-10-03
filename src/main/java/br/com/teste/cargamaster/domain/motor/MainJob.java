@@ -1,7 +1,9 @@
 package br.com.teste.cargamaster.domain.motor;
 
 import br.com.teste.cargamaster.domain.app.Cliente1.Pessoa;
+import br.com.teste.cargamaster.domain.app.Fabricabusiness;
 import br.com.teste.cargamaster.domain.app.FabricaCliente;
+import br.com.teste.cargamaster.domain.motor.PreJob.entity.CargaCampo;
 import br.com.teste.cargamaster.domain.motor.Utils.JobExecutionUtils;
 import br.com.teste.cargamaster.domain.motor.Utils.JobStatus;
 import lombok.extern.slf4j.Slf4j;
@@ -37,12 +39,12 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import java.io.File;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
 import javax.sql.DataSource;
-import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Configuration
 @Slf4j
@@ -114,11 +116,13 @@ public class MainJob {
 
         JobParameters jobParameters = jobExecution.getJobParameters();
 
-        FabricaCliente fabricaCliente = new FabricaCliente();
-        Object cliente = fabricaCliente.buscaClienteParaCarga(jobParameters);
+        Fabricabusiness fabricabusiness = new Fabricabusiness();
+        Object cliente = fabricabusiness.buscaClienteParaCarga(jobParameters);
 
-        //buscar info no banco
-        List<String> mockcoluna = List.of("nome", "email", "dataNascimento", "idade");
+        final List<String> resultadoCampos = fabricabusiness.gerarCamposParaProcessamento(jobParameters);
+
+        //List<String>resultadoCampos = List.of("");
+
 
         FlatFileItemReaderBuilder<Object> readerBuilder = new FlatFileItemReaderBuilder<>()
                 .name("reader")
@@ -128,7 +132,7 @@ public class MainJob {
 
         if (Objects.requireNonNull(jobParameters.getString("usaPosicionamento")).equalsIgnoreCase("true")) {
             readerBuilder.lineTokenizer(new FixedLengthTokenizer() {{
-                setNames(mockcoluna.toArray(new String[0]));
+                setNames(resultadoCampos.toArray(new String[0]));
                 setColumns(
                         new Range(1, 5),
                         new Range(6, 25),
@@ -140,11 +144,12 @@ public class MainJob {
         } else {
             readerBuilder.delimited()
                     .delimiter(Objects.requireNonNull(jobParameters.getString("delimitador")))
-                    .names(mockcoluna.toArray(new String[0]));
+                    .names(resultadoCampos.toArray(new String[0]));
         }
 
         return readerBuilder.build();
     }
+
 
     @Bean
     @JobScope
@@ -201,4 +206,5 @@ public class MainJob {
     public JobExecutionListener tempoExecucaoJob() {
         return new JobExecutionUtils();
     }
+
 }

@@ -44,7 +44,7 @@ public class JobLaunchingController {
             preJob.executar(executarPreJob);
             return ResponseEntity.status(HttpStatus.OK).body("Job inicializado com sucesso!");
 
-        } catch (JobExecutionException e) {
+        } catch (IllegalStateException e) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body("Job com este parâmetro já está em execução");
         } catch (Exception e) {
             e.printStackTrace();

@@ -11,7 +11,9 @@ import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -32,9 +34,9 @@ public class PreJobFacade {
             TipoConexao tipoConexao = buscaTipoConexao(executarPreJob);
             TipoDelimitador tipoDelimitador = buscaTipoDelimitador(executarPreJob);
             TipoCampo tipoCampo = buscaTipoCampo(executarPreJob);
-            Campo campo = buscaCampo(executarPreJob);
+            List<Campo> campo = buscaCampo(executarPreJob);
             Carga carga = buscaCarga(executarPreJob);
-            CargaCampo cargaCampo = buscaCargaCampo(executarPreJob);
+            List<CargaCampo> cargaCampo = buscaCargaCampo(executarPreJob);
             CargaDestino cargaDestino = buscaCargaDestino(executarPreJob);
             CargaDestinoCampo cargaDestinoCampo = buscaCargaDestinoCampo(executarPreJob);
 
@@ -105,20 +107,21 @@ public class PreJobFacade {
         return null;
     }
 
-    private CargaCampo buscaCargaCampo(ExecutarPreJob executarPreJob) {
+    private List<CargaCampo> buscaCargaCampo(ExecutarPreJob executarPreJob) {
 
         try {
-            CargaCampo cargaCampo = preJobDao.buscaCargaCampo(executarPreJob);
-            if (cargaCampo != null) {
-
-                return CargaCampo.builder()
-                        .idCargaCampo(cargaCampo.getIdCargaCampo())
-                        .idCarga(cargaCampo.getIdCarga())
-                        .idCampo(cargaCampo.getIdCampo())
-                        .ordem(cargaCampo.getOrdem())
-                        .posicaoInicial(cargaCampo.getPosicaoInicial())
-                        .posicaoFinal(cargaCampo.getPosicaoFinal())
-                        .build();
+            List<CargaCampo> cargaCampoList = preJobDao.buscaCargaCampo(executarPreJob);
+            if (cargaCampoList != null) {
+                return cargaCampoList.stream()
+                        .map(cargaCampo -> CargaCampo.builder()
+                                .idCargaCampo(cargaCampo.getIdCargaCampo())
+                                .idCarga(cargaCampo.getIdCarga())
+                                .idCampo(cargaCampo.getIdCampo())
+                                .ordem(cargaCampo.getOrdem())
+                                .posicaoInicial(cargaCampo.getPosicaoInicial())
+                                .posicaoFinal(cargaCampo.getPosicaoFinal())
+                                .build())
+                        .collect(Collectors.toList());
             }
         }catch (Exception e){
             log.error("CargaCampo is NULL for ExecutarPreJob: {}", executarPreJob);
@@ -132,7 +135,7 @@ public class PreJobFacade {
             Carga carga = preJobDao.buscaCarga(executarPreJob);
             if (carga != null) {
 
-                CargaCampo cargaCampo = buscaCargaCampo(executarPreJob);
+                //List<CargaCampo> cargaCampo = buscaCargaCampo(executarPreJob);
 
                 return Carga.builder()
                         .idCarga(carga.getIdCarga())
@@ -157,16 +160,18 @@ public class PreJobFacade {
         return null;
     }
 
-    private Campo buscaCampo(ExecutarPreJob executarPreJob) {
+    private List<Campo> buscaCampo(ExecutarPreJob executarPreJob) {
 
       try {
-          Campo campo = preJobDao.buscaCampo(executarPreJob);
-          if (campo != null) {
-              return Campo.builder()
-                      .idCampo(campo.getIdCampo())
-                      .campo(campo.getCampo())
-                      .idTipoCampo(campo.getIdTipoCampo())
-                      .build();
+          List<Campo> campoList = preJobDao.buscaCampo(executarPreJob);
+          if (campoList != null) {
+              return campoList.stream()
+                              .map(campo -> Campo.builder()
+                                      .idCampo(campo.getIdCampo())
+                                      .campo(campo.getCampo())
+                                      .idTipoCampo(campo.getIdTipoCampo())
+                                      .build())
+                      .collect(Collectors.toList());
           }
       }catch (Exception e){
           log.error("Campo is NULL for ExecutarPreJob: {}", executarPreJob, e);
@@ -244,9 +249,14 @@ public class PreJobFacade {
         params.put("tipoCampoDescricao", result.getTipoCampo().getDescricao());
 
         // Campo
-        params.put("campoId", result.getCampo().getIdCampo());
-        params.put("campoNome", result.getCampo().getCampo());
-        params.put("campoTipoCampo", result.getCampo().getIdTipoCampo());
+        List<Campo> campos = result.getCampo();
+        for(Campo campo : campos){
+            params.put("campoId_" + campo.getIdCampo(), campo.getIdCampo());
+            params.put("campoNome_" + campo.getCampo(), campo.getCampo());
+            params.put("campoTipoCampo_" + campo.getIdTipoCampo(), campo.getIdTipoCampo());
+
+            params.put("todosCampos", campos);
+        }
 
         // Carga
         params.put("cargaId", result.getCarga().getIdCarga());
@@ -260,11 +270,18 @@ public class PreJobFacade {
         params.put("cargaInteracaoPosicaoInicial", result.getCarga().getInteracaoPosicaoInicial());
         params.put("cargaInteracaoPosicaoFinal", result.getCarga().getInteracaoPosicaoFinal());
 
-        // CargaCampo
-        params.put("cargaCampoId", result.getCargaCampo().getIdCargaCampo());
-        params.put("cargaCampoOrdem", result.getCargaCampo().getOrdem());
-        params.put("cargaCampoPosicaoInicial", result.getCargaCampo().getPosicaoInicial());
-        params.put("cargaCampoPosicaoFinal", result.getCargaCampo().getPosicaoFinal());
+        List<CargaCampo> cargaCampos = result.getCargaCampo();
+        for (CargaCampo cargaCampo : cargaCampos) {
+
+            //usar paramentro nome_"numero id" para carregar campo individualmente
+            params.put("cargaCampoId_" + cargaCampo.getIdCargaCampo(), cargaCampo.getIdCargaCampo());
+            params.put("cargaCampoOrdem_" + cargaCampo.getIdCargaCampo(), cargaCampo.getOrdem());
+            params.put("cargaCampoPosicaoInicial_" + cargaCampo.getIdCargaCampo(), cargaCampo.getPosicaoInicial());
+            params.put("cargaCampoPosicaoFinal_" + cargaCampo.getIdCargaCampo(), cargaCampo.getPosicaoFinal());
+
+            //para carregar todos os campos
+            params.put("todasCargaCampos", cargaCampos);
+        }
 
         // CargaDestino
         params.put("cargaDestinoId", result.getCargaDestino().getIdCargaDestino());

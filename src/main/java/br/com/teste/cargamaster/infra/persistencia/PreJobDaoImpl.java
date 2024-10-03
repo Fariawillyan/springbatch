@@ -7,6 +7,8 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Repository
 public class PreJobDaoImpl implements  IPreJobDao{
 
@@ -67,7 +69,7 @@ public class PreJobDaoImpl implements  IPreJobDao{
 
     @Override
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
-    public CargaCampo buscaCargaCampo(ExecutarPreJob executarPreJob) {
+    public List<CargaCampo> buscaCargaCampo(ExecutarPreJob executarPreJob) {
         return jdbcClient
                 .sql(""" 
                         SELECT
@@ -79,12 +81,12 @@ public class PreJobDaoImpl implements  IPreJobDao{
                             cc.posicao_final
                          FROM
                             TB_CARGA_CAMPO cc
-                         WHERE cc.id_carga_campo = :idCargaCampo
+                         WHERE cc.id_carga = :idCargaCampo
                          
                          """)
                 .param("idCargaCampo", executarPreJob.getIdCarga())
                 .query(CargaCampo.class)
-                .single();
+                .list();
     }
 
     @Override
@@ -119,18 +121,13 @@ public class PreJobDaoImpl implements  IPreJobDao{
 
     @Override
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
-    public Campo buscaCampo(ExecutarPreJob executarPreJob) {
+    public List<Campo> buscaCampo(ExecutarPreJob executarPreJob) {
         return jdbcClient
                 .sql("""
                          SELECT
-                            c.id_campo,
-                            c.campo,
-                            tc.id_tipo_campo
+                           *
                          FROM
-                                TB_CAMPO c
-                            INNER JOIN
-                                TB_TIPO_CAMPO tc ON c.id_campo = tc.id_tipo_campo
-                         WHERE c.id_campo = :idCampo
+                                TB_CAMPO;
                          
                          """)
                 .param("idCampo", executarPreJob.getIdCarga())
@@ -141,7 +138,7 @@ public class PreJobDaoImpl implements  IPreJobDao{
                     campo.setIdTipoCampo(rs.getInt("id_tipo_campo"));
                     return campo;
         })
-                .single();
+                .list();
     }
 
     @Override

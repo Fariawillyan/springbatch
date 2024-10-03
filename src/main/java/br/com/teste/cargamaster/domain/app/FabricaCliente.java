@@ -7,7 +7,7 @@ import org.springframework.batch.core.JobParameters;
 import java.util.Objects;
 
 @Slf4j
-public class FabricaCliente {
+public abstract class FabricaCliente {
     public Object buscaClienteParaCarga(JobParameters jobParameters) {
         return switch (Objects.requireNonNull(jobParameters.getString("cargaId"))) {
             case "3" -> {
@@ -21,8 +21,4 @@ public class FabricaCliente {
             }
         };
     }
-
-
-
-
 }
