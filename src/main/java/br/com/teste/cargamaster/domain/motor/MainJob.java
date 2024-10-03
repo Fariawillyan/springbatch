@@ -121,9 +121,6 @@ public class MainJob {
 
         final List<String> resultadoCampos = fabricabusiness.gerarCamposParaProcessamento(jobParameters);
 
-        //List<String>resultadoCampos = List.of("");
-
-
         FlatFileItemReaderBuilder<Object> readerBuilder = new FlatFileItemReaderBuilder<>()
                 .name("reader")
                 .resource(new FileSystemResource("carga/pessoas.csv")) //Se for testar posicionamento mudar o arquivo e o usaPosicionamento para true
