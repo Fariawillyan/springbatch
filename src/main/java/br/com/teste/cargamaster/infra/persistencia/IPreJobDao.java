@@ -1,7 +1,7 @@
 package br.com.teste.cargamaster.infra.persistencia;
 
-import br.com.teste.cargamaster.domain.motor.PreJob.entity.*;
-import br.com.teste.cargamaster.domain.motor.PreJob.vo.ExecutarPreJob;
+import br.com.teste.cargamaster.app.motor.preJob.entity.*;
+import br.com.teste.cargamaster.app.motor.preJob.vo.ExecutarPreJob;
 
 import java.util.List;
 
