@@ -72,7 +72,7 @@ INSERT INTO TB_CARGA_DESTINO (id_carga_destino, id_carga, descricao, tabela_dest
                                sql_delete, id_tipo_conexao, db_host, db_porta, db_usuario, db_senha,
                                db_instancia, db_banco, identificador_tabela)
 VALUES (3, 3, 'Cadastro de pessoas', 'TB_PESSOA',
-        'INSERT INTO TB_PESSOA (nome, email, data_nascimento, idade) VALUES (:nome, :email, :dataNascimento, :idade)',
+        'INSERT INTO TB_PESSOA (nome, email, data_nascimento, idade) VALUES (:nome, :email, :data_nascimento, :idade)',
         'TESTE', 'TESTE',
         3, '1', '1', '1', 'Teste', 'teste123', 'SQLSERVER', 'TESTE_1');
 

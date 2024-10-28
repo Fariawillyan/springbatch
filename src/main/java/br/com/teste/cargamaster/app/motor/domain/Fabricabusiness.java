@@ -8,11 +8,8 @@ import java.util.List;
 import java.util.Objects;
 
 @Slf4j
-public class Fabricabusiness extends  FabricaCliente{
+public class Fabricabusiness{
 
-    public Object buscaClienteParaCarga(JobParameters jobParameters){
-        return super.buscaClienteParaCarga(jobParameters);
-    }
 
     public List<String> gerarCamposParaProcessamento(JobParameters jobParameters) {
         List<String> cargaCampos = List.of(Objects.requireNonNull(jobParameters.getString("todasCargaCampos")).split(","));

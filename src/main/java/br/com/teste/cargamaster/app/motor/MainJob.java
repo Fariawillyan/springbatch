@@ -1,6 +1,5 @@
 package br.com.teste.cargamaster.app.motor;
 
-import br.com.teste.cargamaster.app.motor.domain.Cliente1.Pessoa;
 import br.com.teste.cargamaster.app.motor.domain.Fabricabusiness;
 import br.com.teste.cargamaster.app.motor.jobutils.JobExecutionUtils;
 import br.com.teste.cargamaster.app.motor.jobutils.JobStatus;
@@ -80,12 +79,6 @@ public class MainJob {
 
         JobExecution jobExecution = jobLauncher.run(job, preJobResultado);
         jobStatus.EnvioStatusParaPosJob(jobExecution.getStatus());
-
-        //Para apresentar o teste no terminal -- remover quando nao testar mais
-        jdbcClient.
-                sql(" SELECT * FROM TB_PESSOA; ")
-                .query(Pessoa.class)
-                .stream().forEach(p -> log.info("Encontrado <{{}}> no database.", p));
     }
 
     @Bean
@@ -153,9 +146,7 @@ public class MainJob {
         return items -> {
             try {
                 NamedParameterJdbcTemplate namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
-
-                //Passar o jobParameters do insert e  ajustar o cameCase no Map jobparameters.
-                String sql = "INSERT INTO TB_PESSOA (nome, email, data_nascimento, idade) VALUES (:nome, :email, :data_nascimento, :idade)";
+                String sql = jobParameters.getString("cargaDestinoSqlInsert");
 
                 for (Map<String, Object> item : items) {
                     MapSqlParameterSource params = new MapSqlParameterSource(item);
