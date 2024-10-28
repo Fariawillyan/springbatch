@@ -18,12 +18,11 @@ import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
-import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
-import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.item.file.FlatFileItemReader;
-import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
-import org.springframework.batch.item.file.transform.FixedLengthTokenizer;
-import org.springframework.batch.item.file.transform.Range;
+import org.springframework.batch.item.file.mapping.DefaultLineMapper;
+import org.springframework.batch.item.file.mapping.FieldSetMapper;
+import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.batch.item.file.transform.FieldSet;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -32,6 +31,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -98,65 +99,78 @@ public class MainJob {
     }
 
     @Bean
-    public Step step(ItemReader<Object> reader, ItemWriter<Object> writer, JobRepository jobRepository){
+    public Step step(ItemReader<Map<String, Object>> reader, ItemWriter<Map<String, Object>> writer, JobRepository jobRepository) {
         return new StepBuilder("step", jobRepository)
-                .<Object, Object>chunk(200, transactionManager)
+                .<Map<String, Object>, Map<String, Object>>chunk(200, transactionManager)
                 .reader(reader)
-                //.processor(... para processar algo se precisar)
+                //.processor(...) // Adicione seu processador se necessário
                 .writer(writer)
                 .build();
     }
 
     @Bean
     @JobScope
-    public FlatFileItemReader<Object> reader(@Value("#{jobExecution}") JobExecution jobExecution){
-
+    public FlatFileItemReader<Map<String, Object>> reader(@Value("#{jobExecution}") JobExecution jobExecution) {
         JobParameters jobParameters = jobExecution.getJobParameters();
-
         Fabricabusiness fabricabusiness = new Fabricabusiness();
-        Object cliente = fabricabusiness.buscaClienteParaCarga(jobParameters);
-
         final List<String> resultadoCampos = fabricabusiness.gerarCamposParaProcessamento(jobParameters);
 
-        FlatFileItemReaderBuilder<Object> readerBuilder = new FlatFileItemReaderBuilder<>()
-                .name("reader")
-                .resource(new FileSystemResource("carga/pessoas.csv")) //Se for testar posicionamento mudar o arquivo e o usaPosicionamento para true
-                .comments("--")
-                .targetType((Class<Object>) cliente.getClass());
+        FlatFileItemReader<Map<String, Object>> reader = new FlatFileItemReader<>();
+        reader.setName("reader");
+        reader.setResource(new FileSystemResource("carga/pessoas.csv")); // Certifique-se de que o caminho do arquivo está correto
 
-        if (Objects.requireNonNull(jobParameters.getString("usaPosicionamento")).equalsIgnoreCase("true")) {
-            readerBuilder.lineTokenizer(new FixedLengthTokenizer() {{
-                setNames(resultadoCampos.toArray(new String[0]));
-                setColumns(
-                        new Range(1, 5),
-                        new Range(6, 25),
-                        new Range(26, 45),
-                        new Range(46, 48),
-                        new Range(49, 49)
-                );
-            }});
-        } else {
-            readerBuilder.delimited()
-                    .delimiter(Objects.requireNonNull(jobParameters.getString("delimitador")))
-                    .names(resultadoCampos.toArray(new String[0]));
-        }
+        DefaultLineMapper<Map<String, Object>> lineMapper = new DefaultLineMapper<>();
+        lineMapper.setLineTokenizer(new DelimitedLineTokenizer() {{
+            setDelimiter("|"); // Define o delimitador
+            setNames(resultadoCampos.stream().map(String::toLowerCase).toArray(String[]::new)); // Define os nomes das colunas em maiúsculas
+        }});
 
-        return readerBuilder.build();
+        lineMapper.setFieldSetMapper(new FieldSetMapper<Map<String, Object>>() {
+            @Override
+            public Map<String, Object> mapFieldSet(FieldSet fieldSet) {
+                Map<String, Object> map = new HashMap<>();
+                for (String name : fieldSet.getNames()) {
+                    map.put(name, fieldSet.readString(name)); // Lê como String
+                }
+                return map;
+            }
+        });
+
+        //lineMapper.setStrict(true); // Opcional: Se você quiser garantir que todas as colunas sejam mapeadas
+        reader.setLineMapper(lineMapper);
+        reader.setLinesToSkip(0); // Se precisar ignorar o cabeçalho
+
+        return reader;
     }
+
 
 
     @Bean
     @JobScope
-    //@StepScope caso precisar ter multiplos steps.
-    public ItemWriter<Object> writer(@Qualifier("springDS") DataSource dataSource,  @Value("#{jobExecution}") JobExecution jobExecution) {
-
+    public ItemWriter<Map<String, Object>> writer(@Qualifier("springDS") DataSource dataSource, @Value("#{jobExecution}") JobExecution jobExecution) {
         JobParameters jobParameters = jobExecution.getJobParameters();
 
-        return new JdbcBatchItemWriterBuilder<Object>()
-                .dataSource(dataSource)
-                .sql(Objects.requireNonNull(jobParameters.getString("cargaDestinoSqlInsert")))
-                .itemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>())
-                .build();
+        return items -> {
+            try {
+                NamedParameterJdbcTemplate namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
+
+                // String SQL correta, utilizando nomes de parâmetros que correspondem às chaves do Map
+                String sql = "INSERT INTO TB_PESSOA (nome, email, data_nascimento, idade) VALUES (:nome, :email, :data_nascimento, :idade)";
+
+                for (Map<String, Object> item : items) {
+                    // Crie um MapSqlParameterSource a partir do item
+                    MapSqlParameterSource params = new MapSqlParameterSource(item);
+
+                    // Debug: imprime os parâmetros que serão usados na inserção
+                    System.out.println("****************Parâmetros: " + params.getValues());
+
+                    // Execute a inserção
+                    namedParameterJdbcTemplate.update(sql, params);
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("Erro ao gravar itens: " + e.getMessage(), e);
+            }
+        };
     }
 
     @Bean
