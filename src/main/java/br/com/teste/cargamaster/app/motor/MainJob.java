@@ -154,17 +154,11 @@ public class MainJob {
             try {
                 NamedParameterJdbcTemplate namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
 
-                // String SQL correta, utilizando nomes de parâmetros que correspondem às chaves do Map
+                //Passar o jobParameters do insert e  ajustar o cameCase no Map jobparameters.
                 String sql = "INSERT INTO TB_PESSOA (nome, email, data_nascimento, idade) VALUES (:nome, :email, :data_nascimento, :idade)";
 
                 for (Map<String, Object> item : items) {
-                    // Crie um MapSqlParameterSource a partir do item
                     MapSqlParameterSource params = new MapSqlParameterSource(item);
-
-                    // Debug: imprime os parâmetros que serão usados na inserção
-                    System.out.println("****************Parâmetros: " + params.getValues());
-
-                    // Execute a inserção
                     namedParameterJdbcTemplate.update(sql, params);
                 }
             } catch (Exception e) {
